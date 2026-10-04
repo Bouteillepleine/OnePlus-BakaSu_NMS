@@ -782,7 +782,11 @@ runs:
 
     - name: Add BakaSU
       shell: bash
-      if: ${{ inputs.ksu_type == 'RSKSU' }}
+      # Both spellings, same as the validation gate: this step CLONES KernelSU, and
+      # when it is skipped the build does not fail here - it fails three steps later
+      # with "fix_selinux_seqno.patch neither applies nor is already present",
+      # because the directory the patch stack targets was never created.
+      if: ${{ inputs.ksu_type == 'BAKASU' || inputs.ksu_type == 'RSKSU' }}
       run: |
         set -euo pipefail
         echo "::group::Add BakaSU"
