@@ -1,6 +1,6 @@
 <div align="center">
 
-# OnePlus 📦 ReSukiSU 📦 NoMount
+# OnePlus 📦 BakaSU 📦 NoMount
 
 ### A custom OnePlus kernel + a **mountless** hiding add-on
 
