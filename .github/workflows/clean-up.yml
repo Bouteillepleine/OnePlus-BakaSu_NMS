@@ -228,11 +228,11 @@ jobs:
             }
 
             function classifyCache(key) {
-              if (/^RSKSU-v\d+-LTO-/i.test(key) || key.includes('-LTO-')) {
+              if (/^(?:RSKSU|BAKASU)-v\d+-LTO-/i.test(key) || key.includes('-LTO-')) {
                 return 'lto';
               }
 
-              if (/^RSKSU-v\d+-/i.test(key)) {
+              if (/^(?:RSKSU|BAKASU)-v\d+-/i.test(key)) {
                 return 'ccache';
               }
 
@@ -259,8 +259,8 @@ jobs:
               // Expected examples:
               // RSKSU-v3-OP12-OOS16-android15-6.6-...
               // RSKSU-v3-LTO-OP12-OOS16-android15-6.6-...
-              let normalized = key.replace(/^RSKSU-v\d+-LTO-/i, '');
-              normalized = normalized.replace(/^RSKSU-v\d+-/i, '');
+              let normalized = key.replace(/^(?:RSKSU|BAKASU)-v\d+-LTO-/i, '');
+              normalized = normalized.replace(/^(?:RSKSU|BAKASU)-v\d+-/i, '');
 
               const parts = normalized.split('-');
 
@@ -552,11 +552,11 @@ jobs:
             }
 
             function classifyCache(key) {
-              if (/^RSKSU-v\d+-LTO-/i.test(key) || key.includes('-LTO-')) {
+              if (/^(?:RSKSU|BAKASU)-v\d+-LTO-/i.test(key) || key.includes('-LTO-')) {
                 return 'lto';
               }
 
-              if (/^RSKSU-v\d+-/i.test(key)) {
+              if (/^(?:RSKSU|BAKASU)-v\d+-/i.test(key)) {
                 return 'ccache';
               }
 
@@ -1052,11 +1052,11 @@ jobs:
             }
 
             function classifyCache(key) {
-              if (/^RSKSU-v\d+-LTO-/i.test(key) || key.includes('-LTO-')) {
+              if (/^(?:RSKSU|BAKASU)-v\d+-LTO-/i.test(key) || key.includes('-LTO-')) {
                 return 'lto';
               }
 
-              if (/^RSKSU-v\d+-/i.test(key)) {
+              if (/^(?:RSKSU|BAKASU)-v\d+-/i.test(key)) {
                 return 'ccache';
               }
 
@@ -1080,8 +1080,8 @@ jobs:
             }
 
             function extractDeviceFromKey(key) {
-              let normalized = key.replace(/^RSKSU-v\d+-LTO-/i, '');
-              normalized = normalized.replace(/^RSKSU-v\d+-/i, '');
+              let normalized = key.replace(/^(?:RSKSU|BAKASU)-v\d+-LTO-/i, '');
+              normalized = normalized.replace(/^(?:RSKSU|BAKASU)-v\d+-/i, '');
 
               const parts = normalized.split('-');
               const oosIndex = parts.findIndex(p => /^OOS\d+$/i.test(p));

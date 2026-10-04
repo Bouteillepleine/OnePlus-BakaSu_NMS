@@ -1,4 +1,4 @@
-name: 'Build OnePlus Kernel with ReSukiSU'
+name: 'Build OnePlus Kernel with BakaSU'
 
 inputs:
   op_config_json:
@@ -60,10 +60,10 @@ outputs:
     description: 'Full kernel version string'
     value: ${{ steps.save_metadata.outputs.kernel_version }}
   ksu_version:
-    description: 'ReSukiSU version number'
+    description: 'BakaSU version number'
     value: ${{ steps.save_metadata.outputs.ksu_version }}
   ksu_type:
-    description: 'ReSukiSU Variant'
+    description: 'BakaSU Variant'
     value: ${{ steps.save_metadata.outputs.ksu_type }}
   build_timestamp:
     description: 'Effective kernel build timestamp used in uname -a'
@@ -125,10 +125,15 @@ runs:
       run: |
         set -euo pipefail
 
-        if [ "${{ inputs.ksu_type }}" != "RSKSU" ]; then
-          echo "::error::This action only supports RSKSU/ReSukiSU. Got: ${{ inputs.ksu_type }}"
-          exit 1
-        fi
+        # BAKASU is the name now; RSKSU is still accepted so an old dispatch json,
+        # or a saved one, keeps working instead of failing at the first step.
+        case "${{ inputs.ksu_type }}" in
+          BAKASU|RSKSU) : ;;
+          *)
+            echo "::error::This action only supports BAKASU (or legacy RSKSU). Got: ${{ inputs.ksu_type }}"
+            exit 1
+            ;;
+        esac
 
         echo "✅ KSU type validated: ${{ inputs.ksu_type }}"
 
@@ -775,12 +780,12 @@ runs:
         sed -i 's/protected_modules = \[.*\]/protected_modules = []/' common/modules.bzl || true
         echo "::endgroup::"
 
-    - name: Add ReSukiSU
+    - name: Add BakaSU
       shell: bash
       if: ${{ inputs.ksu_type == 'RSKSU' }}
       run: |
         set -euo pipefail
-        echo "::group::Add ReSukiSU"
+        echo "::group::Add BakaSU"
 
         cd "$KERNEL_PLATFORM_FOLDER"
 
@@ -790,7 +795,7 @@ runs:
         KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
         SETUP_REF="${KSU_INPUT:-main}"
 
-        echo "Downloading ReSukiSU setup script from $SETUP_REF..."
+        echo "Downloading BakaSU setup script from $SETUP_REF..."
         if ! curl --fail --location --proto '=https' --tlsv1.2 -LSs \
           --retry 5 --retry-delay 5 --retry-all-errors \
           "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/${SETUP_REF}/kernel/setup.sh" \
@@ -800,7 +805,7 @@ runs:
             --retry 5 --retry-delay 5 --retry-all-errors \
             "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" \
             -o "$RSKSU_SETUP_SCRIPT"; then
-            echo "::error::Failed to download ReSukiSU setup.sh after retries"
+            echo "::error::Failed to download BakaSU setup.sh after retries"
             exit 1
           fi
         fi
@@ -837,12 +842,12 @@ runs:
           echo "No branch/hash provided — using default installer mode."
           bash "$RSKSU_SETUP_SCRIPT"
         else
-          echo "Using ReSukiSU branch/hash: $KSU_INPUT"
+          echo "Using BakaSU branch/hash: $KSU_INPUT"
           bash "$RSKSU_SETUP_SCRIPT" "$KSU_INPUT"
         fi
 
         if [ ! -d "$KERNEL_PLATFORM_FOLDER/KernelSU" ]; then
-          echo "::error::KernelSU directory was not created by ReSukiSU setup."
+          echo "::error::KernelSU directory was not created by BakaSU setup."
           find "$KERNEL_PLATFORM_FOLDER" -maxdepth 3 -type d \( -iname "*ksu*" -o -iname "*resuki*" \) || true
           exit 1
         fi
@@ -859,9 +864,9 @@ runs:
         BASE_VERSION=30700
         KSU_VERSION=$((COMMITS_COUNT + BASE_VERSION))
 
-        echo "ReSukiSU commits: $COMMITS_COUNT"
-        echo "ReSukiSU version: $KSU_VERSION"
-        echo "ReSukiSU commit:  $KSU_COMMIT_SHA"
+        echo "BakaSU commits: $COMMITS_COUNT"
+        echo "BakaSU version: $KSU_VERSION"
+        echo "BakaSU commit:  $KSU_COMMIT_SHA"
 
         {
           echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA"
@@ -887,7 +892,7 @@ runs:
           printf '%s\n' 'CONFIG_KSU=y'
           printf '%s\n' 'CONFIG_KSU_MULTI_MANAGER_SUPPORT=y'
           printf '%s\n' 'CONFIG_KSU_TOOLKIT_SUPPORT=y'
-          printf 'CONFIG_KSU_FULL_NAME_FORMAT="%s-⚡Ultra⚡@ReSukiSU"\n' "${TAG_NAME}"
+          printf 'CONFIG_KSU_FULL_NAME_FORMAT="%s-⚡Ultra⚡@BakaSU"\n' "${TAG_NAME}"
         } >> "$DEFCONFIG"
 
         {
@@ -895,7 +900,7 @@ runs:
           echo "$KSU_VERSION"
         } >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
 
-        echo "✅ ReSukiSU added (commit: ${KSU_COMMIT_SHA:0:8})"
+        echo "✅ BakaSU added (commit: ${KSU_COMMIT_SHA:0:8})"
         echo "::endgroup::"
 
     - name: Apply NoMount (hookless) Patch
@@ -1961,8 +1966,8 @@ runs:
           echo "Kernel Uname: ${{ env.KERNEL_UNAME }}"
           echo "Build User: ${{ env.BUILD_USER }}"
           echo "Build Host: ${{ env.BUILD_HOST }}"
-          echo "ReSukiSU Version: ${KSUVER:-unknown}"
-          echo "ReSukiSU commit SHA: ${KSU_SHA:-unknown}"
+          echo "BakaSU Version: ${KSUVER:-unknown}"
+          echo "BakaSU commit SHA: ${KSU_SHA:-unknown}"
           if [ "${{ env.OP_NMS }}" = true ]; then
             echo "NoMount Version: ${NMVER:-unknown}"
           fi
@@ -1996,7 +2001,7 @@ runs:
         } | tee summary.txt
         
         SUM_HEAD="🎯 <b>${{ env.OP_MODEL }}</b> — ${{ steps.save_metadata.outputs.kernel_version }}"
-        SUM_HEAD="${SUM_HEAD} · ⚡ReSukiSU ${KSUVER:-?}"
+        SUM_HEAD="${SUM_HEAD} · ⚡BakaSU ${KSUVER:-?}"
         if [ "${{ env.OP_NMS }}" = true ]; then SUM_HEAD="${SUM_HEAD} · NoMount ${NMVER:-?}"; fi
         SUM_HEAD="${SUM_HEAD} · ⏱ ${{ steps.collect_stats.outputs.build_time }}s"
         if [ "${{ steps.collect_stats.outputs.warnings_count }}" != "0" ]; then
@@ -2017,12 +2022,12 @@ runs:
           echo "| **Kernel Uname** | \`${{ env.KERNEL_UNAME }}\` |"
           echo "| **Build User** | ${{ env.BUILD_USER }} |"
           echo "| **Build Host** | ${{ env.BUILD_HOST }} |"
-          echo "| **ReSukiSU Version** | ${KSUVER:-unknown} |"
+          echo "| **BakaSU Version** | ${KSUVER:-unknown} |"
           
           if [ "$KSU_SHA" != "unknown" ]; then
-            echo "| **ReSukiSU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/ReSukiSU/ReSukiSU/commit/$KSU_SHA) |"
+            echo "| **BakaSU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/ReSukiSU/ReSukiSU/commit/$KSU_SHA) |"
           else
-            echo "| **ReSukiSU Commit** | unknown |"
+            echo "| **BakaSU Commit** | unknown |"
           fi
           
           if [ "${{ env.OP_NMS }}" = true ]; then
@@ -2178,7 +2183,7 @@ runs:
           rm -rf "$KERNEL_PATCHES_FOLDER" || true
         fi
 
-        rm -f /tmp/resukisu_setup_*.sh /tmp/bbg_setup_*.sh /tmp/clone_log_* || true
+        rm -f /tmp/bakasu_setup_*.sh /tmp/bbg_setup_*.sh /tmp/clone_log_* || true
 
         echo ""
         echo "Disk usage after cleanup:"
