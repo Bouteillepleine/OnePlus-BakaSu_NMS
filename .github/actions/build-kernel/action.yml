@@ -798,12 +798,12 @@ runs:
         echo "Downloading BakaSU setup script from $SETUP_REF..."
         if ! curl --fail --location --proto '=https' --tlsv1.2 -LSs \
           --retry 5 --retry-delay 5 --retry-all-errors \
-          "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/${SETUP_REF}/kernel/setup.sh" \
+          "https://raw.githubusercontent.com/Baka-SU/BakaSU/${SETUP_REF}/kernel/setup.sh" \
           -o "$RSKSU_SETUP_SCRIPT"; then
           echo "::warning::setup.sh not available at $SETUP_REF, falling back to main"
           if ! curl --fail --location --proto '=https' --tlsv1.2 -LSs \
             --retry 5 --retry-delay 5 --retry-all-errors \
-            "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" \
+            "https://raw.githubusercontent.com/Baka-SU/BakaSU/main/kernel/setup.sh" \
             -o "$RSKSU_SETUP_SCRIPT"; then
             echo "::error::Failed to download BakaSU setup.sh after retries"
             exit 1
@@ -821,12 +821,11 @@ runs:
           exit 1
         fi
 
-        # The BakaSU rename landed in-tree before the org it names was published:
-        # setup.sh on that branch clones github.com/Baka-SU/BakaSU, which 404s, and
-        # the build then dies further down with "KernelSU directory was not created".
-        # It is the same tree, so point the clone back at the repo it still lives in --
-        # but only while the new org really is unreachable, so this undoes itself the
-        # day Baka-SU/BakaSU goes live instead of pinning us to the old name forever.
+        # Kept as a fallback, not a fix: Baka-SU/BakaSU went live on 2026-10-04, and
+        # setup.sh there clones its own org. If that repo ever stops answering -- taken
+        # private, moved again -- the clone would fail and the build would die further
+        # down with "KernelSU directory was not created". ReSukiSU/ReSukiSU still holds
+        # the same tree, so fall back to it rather than failing, and only then.
         if grep -q 'github.com/Baka-SU/BakaSU' "$RSKSU_SETUP_SCRIPT"; then
           if git ls-remote --exit-code "https://github.com/Baka-SU/BakaSU" >/dev/null 2>&1; then
             echo "Baka-SU/BakaSU is reachable - leaving setup.sh as upstream wrote it."
@@ -2025,7 +2024,7 @@ runs:
           echo "| **BakaSU Version** | ${KSUVER:-unknown} |"
           
           if [ "$KSU_SHA" != "unknown" ]; then
-            echo "| **BakaSU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/ReSukiSU/ReSukiSU/commit/$KSU_SHA) |"
+            echo "| **BakaSU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/Baka-SU/BakaSU/commit/$KSU_SHA) |"
           else
             echo "| **BakaSU Commit** | unknown |"
           fi
