@@ -855,7 +855,7 @@ jobs:
             echo "| **Device** | \`OP12\`, \`OP13r\`, \`OP-NORD-4\` |"
             echo "| **OS Version** | \`A16\` |"
             echo "| **Kernel Base** | \`android15-6.6.30\`, \`android14-6.1.75\` |"
-            echo "| **Root Type** | \`$ksu_type\` |"
+            echo "| **Root Type** | \`${{ fromJSON(needs.set-op-model.outputs.ksu_options_normalized)[0].type }}\` |"
             echo ""
           } > 00_DOWNLOADS.md
 
