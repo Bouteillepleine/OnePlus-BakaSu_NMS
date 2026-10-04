@@ -4,12 +4,12 @@
 
 ### A custom OnePlus kernel + a **mountless** hiding add-on
 
-*Automated AnyKernel3 builds for dozens of OnePlus models — with `ReSukiSU` root and **NoMount** hookless VFS redirection baked in.*
+*Automated AnyKernel3 builds for dozens of OnePlus models — with `BakaSU` root and **NoMount** hookless VFS redirection baked in.*
 
-[![Latest Release](https://img.shields.io/github/v/release/Bouteillepleine/OnePlus-ReSukiSu_NMS?style=for-the-badge&logo=github&label=Latest%20Release&color=6C4AB6)](https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/Bouteillepleine/OnePlus-ReSukiSu_NMS/total?style=for-the-badge&logo=icloud&logoColor=white&label=Downloads&color=2E8B57)](https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/releases)
-[![Build](https://img.shields.io/github/actions/workflow/status/Bouteillepleine/OnePlus-ReSukiSu_NMS/build-kernel-release.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=Build)](https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/actions)
-[![Stars](https://img.shields.io/github/stars/Bouteillepleine/OnePlus-ReSukiSu_NMS?style=for-the-badge&logo=github&color=E3B341)](https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/stargazers)
+[![Latest Release](https://img.shields.io/github/v/release/Bouteillepleine/OnePlus-BakaSu_NMS?style=for-the-badge&logo=github&label=Latest%20Release&color=6C4AB6)](https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Bouteillepleine/OnePlus-BakaSu_NMS/total?style=for-the-badge&logo=icloud&logoColor=white&label=Downloads&color=2E8B57)](https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/Bouteillepleine/OnePlus-BakaSu_NMS/build-kernel-release.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=Build)](https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/actions)
+[![Stars](https://img.shields.io/github/stars/Bouteillepleine/OnePlus-BakaSu_NMS?style=for-the-badge&logo=github&color=E3B341)](https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/stargazers)
 
 **Based on [WildKernels/OnePlus_KernelSU_SUSFS](https://github.com/WildKernels/OnePlus_KernelSU_SUSFS)**
 
@@ -26,10 +26,10 @@ Every release contains **two things**. Flash the kernel first, then add NoMount 
 
 |  | 1️⃣ The kernel — *built here* | 2️⃣ NoMount Suite — *the add-on* |
 |---|---|---|
-| **What it is** | AnyKernel3 ZIP (`AK3_<device>_…zip`) with `ReSukiSU` root and `CONFIG_NOMOUNT=y` compiled in | `00_NoMount-Module-vX.Y.Z.zip` — the metamodule that switches NoMount **on** |
+| **What it is** | AnyKernel3 ZIP (`AK3_<device>_…zip`) with `BakaSU` root and `CONFIG_NOMOUNT=y` compiled in | `00_NoMount-Module-vX.Y.Z.zip` — the metamodule that switches NoMount **on** |
 | **Where it comes from** | This repo's GitHub Actions — one ZIP per device | The separate **[NoMount Suite](https://github.com/Bouteillepleine/NoMount-Suite)** — attached to each release as an add-on (sorted to the top of the Assets list) |
-| **How you install it** | Flash with **Kernel Flasher** or **ReSukiSU Manager** | **ReSukiSU Manager → Modules → Install from storage** |
-| **Get it now** | [⬇️ Latest release](https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/releases/latest) | [⬇️ Latest release](https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/releases/latest) — it's at the top of the Assets list |
+| **How you install it** | Flash with **Kernel Flasher** or **BakaSU Manager** | **BakaSU Manager → Modules → Install from storage** |
+| **Get it now** | [⬇️ Latest release](https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/releases/latest) | [⬇️ Latest release](https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/releases/latest) — it's at the top of the Assets list |
 
 > [!IMPORTANT]
 > **The kernel on its own does nothing visible.** NoMount is *compiled in* but stays **dormant** until the **NoMount Suite** module activates it. NoMount Suite is the part that carries your injection rules, the WebUI, and the spoofing — think of it like a Magisk/KSU module. **You need both.**
@@ -49,11 +49,11 @@ Most hiding solutions **mount** something — an `overlayfs` or bind mount — t
 
 <table>
   <tr>
-    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/blob/NoMount/docs/screenshots/status.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/NoMount/docs/screenshots/status.jpg" width="155" alt="Status"></a></td>
-    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/blob/NoMount/docs/screenshots/modules.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/NoMount/docs/screenshots/modules.jpg" width="155" alt="Modules"></a></td>
-    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/blob/NoMount/docs/screenshots/rules.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/NoMount/docs/screenshots/rules.jpg" width="155" alt="Rules"></a></td>
-    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/blob/NoMount/docs/screenshots/check.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/NoMount/docs/screenshots/check.jpg" width="155" alt="Check"></a></td>
-    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/blob/NoMount/docs/screenshots/duckdetector.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/NoMount/docs/screenshots/duckdetector.jpg" width="155" alt="Duck Detector"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/blob/NoMount/docs/screenshots/status.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-BakaSu_NMS/NoMount/docs/screenshots/status.jpg" width="155" alt="Status"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/blob/NoMount/docs/screenshots/modules.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-BakaSu_NMS/NoMount/docs/screenshots/modules.jpg" width="155" alt="Modules"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/blob/NoMount/docs/screenshots/rules.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-BakaSu_NMS/NoMount/docs/screenshots/rules.jpg" width="155" alt="Rules"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/blob/NoMount/docs/screenshots/check.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-BakaSu_NMS/NoMount/docs/screenshots/check.jpg" width="155" alt="Check"></a></td>
+    <td align="center"><a href="https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/blob/NoMount/docs/screenshots/duckdetector.jpg"><img src="https://raw.githubusercontent.com/Bouteillepleine/OnePlus-BakaSu_NMS/NoMount/docs/screenshots/duckdetector.jpg" width="155" alt="Duck Detector"></a></td>
   </tr>
   <tr>
     <td align="center"><sub><b>Status</b><br>zero mounts, live counts</sub></td>
@@ -70,7 +70,7 @@ Most hiding solutions **mount** something — an `overlayfs` or bind mount — t
 
 ## ✨ Features
 
-- **ReSukiSU** — kernel-level root.
+- **BakaSU** — kernel-level root.
 - **NoMount** — hookless VFS redirection; modules are served with **no mount at all**.
 - **WireGuard** — modern VPN built into the kernel.
 - **BBR & ECN** — TCP / network optimizations.
@@ -81,7 +81,7 @@ Most hiding solutions **mount** something — an `overlayfs` or bind mount — t
 ## 📱 Supported devices
 
 One build fans out to **dozens** of OnePlus models across Android 13–16 and kernel 5.10–6.12.
-See the [**latest release**](https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/releases/latest) for the full, per-device list — or browse:
+See the [**latest release**](https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/releases/latest) for the full, per-device list — or browse:
 
 ```text
 configs/
@@ -93,15 +93,15 @@ configs/
 
 **Prerequisites:** unlocked bootloader · a backed-up stock `boot.img` · **[Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher/releases)** installed.
 
-1. **Download** the [latest release](https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/releases/latest) — grab **both**:
+1. **Download** the [latest release](https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/releases/latest) — grab **both**:
    - the **kernel** ZIP matching your exact device / OS / kernel base, and
    - the **`00_NoMount-Module-vX.Y.Z.zip`** add-on (top of the Assets list).
-2. **Flash the kernel** ZIP with **Kernel Flasher** (or **ReSukiSU Manager**).
-3. **Install the ReSukiSU Manager APK** — use the version shown as `ReSukiSU Version` in the release notes.
-4. 🧩 **Add NoMount Suite:** ReSukiSU Manager → **Modules → Install from storage** → select `00_NoMount-Module-…zip`.
+2. **Flash the kernel** ZIP with **Kernel Flasher** (or **BakaSU Manager**).
+3. **Install the BakaSU Manager APK** — use the version shown as `BakaSU Version` in the release notes.
+4. 🧩 **Add NoMount Suite:** BakaSU Manager → **Modules → Install from storage** → select `00_NoMount-Module-…zip`.
    > Already have a metamodule? Remove it and reboot **first** — only one metamodule can be active at a time.
 5. **Reboot.**
-6. Open **ReSukiSU Manager → NoMount Suite → Open** — the WebUI should show **Active** with your rules.
+6. Open **BakaSU Manager → NoMount Suite → Open** — the WebUI should show **Active** with your rules.
 
 > [!TIP]
 > **Safety net:** if the phone fails to boot **3 times** in a row, NoMount auto-disables itself so you can get back in and recover. Keep your stock `boot.img` handy either way.
@@ -112,7 +112,7 @@ configs/
 
 - **Update** — re-flash the kernel ZIP **and** NoMount Suite together (keep them a matched set).
 - **After an OTA** — the system update restores the stock kernel; just re-flash the release.
-- **Remove** — delete NoMount Suite in ReSukiSU Manager and reboot, then flash a stock boot image (or take an OTA) to drop the custom kernel.
+- **Remove** — delete NoMount Suite in BakaSU Manager and reboot, then flash a stock boot image (or take an OTA) to drop the custom kernel.
 
 ---
 
@@ -148,10 +148,10 @@ Root option:
 
 ## 🔗 Links
 
-- [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) · [ReSukiSU Manager releases](https://github.com/ReSukiSU/ReSukiSU/releases)
+- [BakaSU](https://github.com/BakaSU/BakaSU) · [BakaSU Manager releases](https://github.com/BakaSU/BakaSU/releases)
 - [NoMount Suite](https://github.com/Bouteillepleine/NoMount-Suite) — the hiding add-on
 - [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
-- [Releases](https://github.com/Bouteillepleine/OnePlus-ReSukiSu_NMS/releases)
+- [Releases](https://github.com/Bouteillepleine/OnePlus-BakaSu_NMS/releases)
 
 ---
 
@@ -165,7 +165,7 @@ Any and all donations are appreciated!
 ## 🤝 Acknowledgments
 
 - **[NoMount Suite](https://github.com/Bouteillepleine/NoMount-Suite)** &amp; all contributors — NoMount development 🙌 (built on **[maxsteeel/nomount](https://github.com/maxsteeel/nomount)**)
-- **ReSukiSU** — the root solution
+- **BakaSU** — the root solution
 - **AnyKernel3** by osm0sis and contributors
 - **[WildKernels/OnePlus_KernelSU_SUSFS](https://github.com/WildKernels/OnePlus_KernelSU_SUSFS)** — the excellent OnePlus build framework this is forked from
 - **OnePlusOSS** — kernel source

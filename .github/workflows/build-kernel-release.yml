@@ -41,10 +41,10 @@ on:
         type: string
         default: ''
       ksu_options:
-        description: 'Enter ReSukiSU build json'
+        description: 'Enter BakaSU build json. hash = any branch, tag or sha in ReSukiSU/ReSukiSU; rename-project is the BakaSU tree.'
         required: true
         type: string
-        default: '[{"type":"RSKSU","hash":"main"}]'
+        default: '[{"type":"RSKSU","hash":"rename-project"}]'
       optimize_level:
         description: "Compiler optimization level"
         required: true
@@ -723,7 +723,7 @@ jobs:
       REPO_NAME: ${{ github.event.repository.name }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       NOMOUNT_VERSION: ${{ needs.set-op-model.outputs.nomount_version }}
-      RELEASE_NAME: 'ReSukiSU 📦 NoMount (v${{ needs.set-op-model.outputs.nomount_version }})'
+      RELEASE_NAME: 'BakaSU 📦 NoMount (v${{ needs.set-op-model.outputs.nomount_version }})'
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v6
@@ -958,7 +958,7 @@ jobs:
           fi
 
           cat << EOF > release_notes.md
-          # ReSukiSU 📦 NoMount (v$NOMOUNT_VERSION)
+          # BakaSU 📦 NoMount (v$NOMOUNT_VERSION)
           
           **A custom OnePlus kernel + a mountless hiding add-on.** Two downloads: flash the kernel, then add the module on top.
 
@@ -968,8 +968,9 @@ jobs:
 
           | | Download | Where it's from | How to install |
           |---|---|---|---|
-          | 1️⃣ **Kernel** | \`AK3_<device>_…zip\` (pick yours below) | built by this repo's CI | Kernel Flasher / ReSukiSU Manager |
-          | 2️⃣ **NoMount Suite** | \`$MOD_ASSET\` | the separate [NoMount project](${{ github.server_url }}/${MOD_REPO}/releases/latest) | ReSukiSU Manager → Modules → Install from storage |
+          | 1️⃣ **Kernel** | \`AK3_<device>_…zip\` (pick yours below) | built by this repo's CI | Kernel Flasher / BakaSU Manager |
+          | 2️⃣ **BakaSU Manager** | \`BakaSU_*_normal.apk\` or \`*_spoofed.apk\` | upstream CI, mirrored here | install one of the two - see below |
+          | 3️⃣ **NoMount Suite** | \`$MOD_ASSET\` | the separate [NoMount project](${{ github.server_url }}/${MOD_REPO}/releases/latest) | BakaSU Manager → Modules → Install from storage |
 
           > The kernel has NoMount **compiled in but dormant** — the **NoMount Suite module activates it**. You need both.
 
@@ -1196,6 +1197,28 @@ jobs:
           echo "--- Final Release Notes ---"
           cat release_notes.md
 
+      - name: 📥 Fetch BakaSU manager APKs
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Upstream publishes the BakaSU manager only as an Actions artifact: those
+          # expire, and another repo's token cannot read them. So the pair is mirrored
+          # into this repo as a `manager-<build>` release, and the newest one rides
+          # along with every kernel release.
+          MGR_TAG=$(gh release list --repo "${{ github.repository }}" --limit 100 \
+            --json tagName --jq '[.[].tagName | select(startswith("manager-"))] | .[0] // empty')
+          if [ -z "$MGR_TAG" ]; then
+            echo "::warning::No manager-* release in this repo - the kernel release will ship without the manager APKs."
+            exit 0
+          fi
+          mkdir -p managers
+          gh release download "$MGR_TAG" --repo "${{ github.repository }}" \
+            --pattern '*.apk' --dir managers
+          echo "MGR_TAG=$MGR_TAG" >> "$GITHUB_ENV"
+          ls -la managers
+
       - name: 🚀 Create GitHub Release
         run: |
           gh release create "${{ env.NEW_TAG }}" \
@@ -1211,6 +1234,12 @@ jobs:
             if [ -f "$file" ]; then
               echo "Uploading $file..."
               gh release upload "${{ env.NEW_TAG }}" "$file" --clobber
+            fi
+          done
+          for apk in ./managers/*.apk; do
+            if [ -f "$apk" ]; then
+              echo "Uploading $apk..."
+              gh release upload "${{ env.NEW_TAG }}" "$apk" --clobber
             fi
           done
           for meta in 00_CHECKSUMS.txt 00_DOWNLOADS.md; do
