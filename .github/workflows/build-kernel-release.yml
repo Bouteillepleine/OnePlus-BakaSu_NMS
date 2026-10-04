@@ -964,17 +964,17 @@ jobs:
 
           ---
 
-          ## 🧩 This release is **two** things
+          ## 🧩 This release is **three** things
 
           | | Download | Where it's from | How to install |
           |---|---|---|---|
           | 1️⃣ **Kernel** | \`AK3_<device>_…zip\` (pick yours below) | built by this repo's CI | Kernel Flasher / BakaSU Manager |
-          | 2️⃣ **BakaSU Manager** | \`BakaSU_*_normal.apk\` or \`*_spoofed.apk\` | upstream CI, mirrored here | install one of the two - see below |
+          | 2️⃣ **BakaSU Manager** | \`BakaSU_*_normal.apk\` or \`*_spoofed.apk\` | upstream CI, mirrored here | install **one** - see *Manager Applications* |
           | 3️⃣ **NoMount Suite** | \`$MOD_ASSET\` | the separate [NoMount project](${{ github.server_url }}/${MOD_REPO}/releases/latest) | BakaSU Manager → Modules → Install from storage |
 
           > The kernel has NoMount **compiled in but dormant** — the **NoMount Suite module activates it**. You need both.
 
-          ## 🔴 REQUIRED — Step 2: install NoMount Suite
+          ## 🔴 REQUIRED — Step 3: install NoMount Suite
 
           After flashing the kernel and rebooting:
 
@@ -1147,7 +1147,13 @@ jobs:
           ### Official Manager
           EOF
           cat << EOF >> release_notes.md
-          - **BakaSU Manager** *(match the kernel by COMMIT, not just version — see \`BakaSU Branch\` in Build Configuration above; the bundled APK's filename carries the same short sha)*
+          - **BakaSU Manager** — two APKs are attached to this release, install **one**:
+            - \`BakaSU_<build>_normal.apk\` — the plain package
+            - \`BakaSU_<build>_spoofed.apk\` — same app under a randomised package name, so a
+              scan of installed packages does not find a known root manager
+            Both carry the same signing certificate, which is the only thing the kernel checks, so either is
+            accepted. The number in the APK name is the manager build, and it matches the \`BAKASU_<build>\`
+            in every AnyKernel3 ZIP name here — that is how you pair them.
             → [GitHub Release](https://github.com/Baka-SU/BakaSU/releases)
           > ⚠️ **Do not let the manager update itself past this kernel.** The version number does not pin the uapi: a manager and a driver can both report the same version and still disagree, which the manager reports as *"Manager uapi version (N) and driver uapi version (M) mismatch"* and root management stops working. Install the APK from **this** release's Assets, and reflash a matching kernel before taking a newer one.
           EOF
