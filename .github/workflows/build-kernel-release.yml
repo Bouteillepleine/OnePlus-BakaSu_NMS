@@ -964,16 +964,17 @@ jobs:
 
           ---
 
-          ## 🧩 This release is **two** things
+          ## 🧩 This release is **three** things
 
           | | Download | Where it's from | How to install |
           |---|---|---|---|
           | 1️⃣ **Kernel** | \`AK3_<device>_…zip\` (pick yours below) | built by this repo's CI | Kernel Flasher / BakaSU Manager |
-          | 2️⃣ **NoMount Suite** | \`$MOD_ASSET\` | the separate [NoMount project](${{ github.server_url }}/${MOD_REPO}/releases/latest) | BakaSU Manager → Modules → Install from storage |
+          | 2️⃣ **BakaSU Manager** | \`BakaSU_<build>_normal.apk\` or \`_spoofed.apk\` | upstream CI, mirrored here | install **one** - see *Manager Applications* |
+          | 3️⃣ **NoMount Suite** | \`$MOD_ASSET\` | the separate [NoMount project](${{ github.server_url }}/${MOD_REPO}/releases/latest) | BakaSU Manager → Modules → Install from storage |
 
           > The kernel has NoMount **compiled in but dormant** — the **NoMount Suite module activates it**. You need both.
 
-          ## 🔴 REQUIRED — Step 2: install NoMount Suite
+          ## 🔴 REQUIRED — Step 3: install NoMount Suite
 
           After flashing the kernel and rebooting:
 
@@ -1146,9 +1147,17 @@ jobs:
           ### Official Manager
           EOF
           cat << EOF >> release_notes.md
-          - **BakaSU Manager** *(match the kernel by COMMIT, not just version — see \`BakaSU Branch\` in Build Configuration above)*
+          - **BakaSU Manager** — two APKs are attached to this release, install **one**:
+            - \`BakaSU_<build>_normal.apk\` — the plain package
+            - \`BakaSU_<build>_spoofed.apk\` — same app under a randomised package name, so a
+              scan of installed packages does not find a known root manager
+            Upstream ships both under the SAME filename, so they are renamed here; the package
+            name is the only other way to tell them apart. Both carry the same signing certificate,
+            which is the only thing the kernel checks. The number is the manager build and it
+            matches the \`BAKASU_<build>\` in every AnyKernel3 ZIP name — they are attached only
+            when they match.
             → [GitHub Release](https://github.com/Baka-SU/BakaSU/releases)
-          > ⚠️ **Do not let the manager update itself past this kernel.** The version number does not pin the uapi: a manager and a driver can both report the same version and still disagree, which the manager reports as *"Manager uapi version (N) and driver uapi version (M) mismatch"* and root management stops working. Install the APK from the manager's own release linked above - this release ships kernels and the Suite, not the manager - and reflash a matching kernel before taking a newer one.
+          > ⚠️ **Do not let the manager update itself past this kernel.** The version number does not pin the uapi: a manager and a driver can both report the same version and still disagree, which the manager reports as *"Manager uapi version (N) and driver uapi version (M) mismatch"* and root management stops working. Install the APK from **this** release's Assets, and reflash a matching kernel before taking a newer one.
           EOF
           cat << EOF >> release_notes.md
           ### Recommended Flasher
@@ -1167,7 +1176,7 @@ jobs:
           ### Via Kernel Flasher
           1. Download the correct AnyKernel3 ZIP for your device.
           2. Flash the ZIP to the active slot using Kernel Flasher.
-          3. Install the BakaSU Manager APK, same version as mentioned in the AnyKernel3 ZIP name (download it from the link under **Manager Applications** below - it is not an asset of this release).
+          3. Install the BakaSU Manager APK from this release's Assets - plain or spoofed, one of the two.
           4. Open the BakaSU app.
           5. In **BakaSU Manager**, install the **NoMount Suite** module (Modules → Install from storage → the NoMount Suite ZIP from this release). Remove any existing metamodule and reboot first if you have one.
           6. Reboot the device.
@@ -1195,6 +1204,35 @@ jobs:
           EOF
           echo "--- Final Release Notes ---"
           cat release_notes.md
+
+      - name: 📥 Fetch BakaSU manager APKs
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KSU_VER: ${{ needs.build.outputs.ksu_ver }}
+        run: |
+          set -euo pipefail
+          # Upstream publishes the per-build manager only as an Actions artifact: those
+          # expire, and another repo's token cannot read them. So the pair is mirrored
+          # into this repo as a `manager-<build>` release and rides along here.
+          MGR_TAG=$(gh release list --repo "${{ github.repository }}" --limit 100 \
+            --json tagName --jq '[.[].tagName | select(startswith("manager-"))] | .[0] // empty')
+          if [ -z "$MGR_TAG" ]; then
+            echo "::warning::No manager-* release in this repo - shipping without the manager APKs."
+            exit 0
+          fi
+          # The manager and the driver must be the same build. A newer kernel with an older
+          # manager is the "Manager uapi version (N) and driver uapi version (M) mismatch"
+          # this release's own notes warn about, so ship nothing rather than a wrong pair.
+          MGR_BUILD="${MGR_TAG#manager-}"
+          if [ -n "${KSU_VER:-}" ] && [ "$MGR_BUILD" != "$KSU_VER" ]; then
+            echo "::warning::$MGR_TAG does not match the built driver (v${KSU_VER}) - not attaching it. Re-mirror the manager for ${KSU_VER}."
+            exit 0
+          fi
+          mkdir -p managers
+          gh release download "$MGR_TAG" --repo "${{ github.repository }}" \
+            --pattern '*.apk' --dir managers
+          ls -la managers
 
       - name: 🚀 Create GitHub Release
         run: |
@@ -1224,6 +1262,12 @@ jobs:
             if [ -f "$file" ]; then
               echo "Uploading $file..."
               gh release upload "${{ env.NEW_TAG }}" "$file" --clobber
+            fi
+          done
+          for apk in ./managers/*.apk; do
+            if [ -f "$apk" ]; then
+              echo "Uploading $apk..."
+              gh release upload "${{ env.NEW_TAG }}" "$apk" --clobber
             fi
           done
           for meta in 00_CHECKSUMS.txt 00_DOWNLOADS.md; do
