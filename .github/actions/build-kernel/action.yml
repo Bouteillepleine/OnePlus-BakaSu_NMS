@@ -1928,6 +1928,16 @@ runs:
         set -euo pipefail
         echo "::group::Build susfs_guard_lkm.ko against this kernel"
 
+        # The module is optional; the kernel is not.  A composite action cannot carry
+        # continue-on-error per step, so every bail below goes through this: it annotates
+        # loudly, records why for the summary, and exits 0 so the Image still ships.
+        susfs_bail() {
+          echo "::error::susfs_guard_lkm.ko NOT produced - $1"
+          echo "SUSFS_KO_STATUS=failed: $1" >> "$GITHUB_ENV"
+          echo "::endgroup::"
+          exit 0
+        }
+
         OUT="$COMMON_KERNEL_FOLDER/out"
 
         # A normal (debug=false) build runs `make Image` only, so it stops after
@@ -1940,12 +1950,10 @@ runs:
           echo "seeded Module.symvers from vmlinux.symvers ($(wc -l < "$OUT/Module.symvers") symbols)"
         fi
         if [ ! -f "$OUT/Module.symvers" ]; then
-          echo "::error::neither Module.symvers nor vmlinux.symvers exists in $OUT - without kernel symbol CRCs the .ko gets no __versions and a CONFIG_MODVERSIONS kernel refuses it"
-          exit 1
+          susfs_bail "neither Module.symvers nor vmlinux.symvers exists in $OUT - without kernel symbol CRCs the .ko gets no __versions and a CONFIG_MODVERSIONS kernel refuses it"
         fi
         if ! grep -q "	module_layout	" "$OUT/Module.symvers"; then
-          echo "::error::module_layout has no CRC in $OUT/Module.symvers - that is the one symbol check_modstruct_version() looks up, so the load would fail"
-          exit 1
+          susfs_bail "module_layout has no CRC in $OUT/Module.symvers - that is the one symbol check_modstruct_version() looks up, so the load would fail"
         fi
 
         # Same reason as Module.symvers: `make Image` never needs scripts/module.lds, so it
@@ -1983,18 +1991,27 @@ runs:
 
         KO="$SUSFS_SRC/kernel/susfs_guard_lkm.ko"
         if [ ! -f "$KO" ]; then
-          echo "::error::susfs_guard_lkm.ko was not produced"
-          exit 1
+          susfs_bail "susfs_guard_lkm.ko was not produced"
         fi
 
         echo "--- modinfo ---"
         modinfo "$KO" 2>/dev/null | grep -E "vermagic|name|description|import_ns" || true
+        # (1) Everything else proves the module is LOADABLE; nothing proved it belongs to
+        # THIS kernel.  Three builders emit the same release string with different struct
+        # layouts, so compare against the release this build itself produced.
+        REL_FILE="$OUT/include/config/kernel.release"
+        [ -f "$REL_FILE" ] || susfs_bail "$REL_FILE is missing, so the module cannot be proven to match this kernel"
+        KREL=$(tr -d ' \r\n' < "$REL_FILE")
+        KOVM=$(modinfo "$KO" 2>/dev/null | sed -n 's/^vermagic: *//p' | awk '{print $1}')
+        [ -n "$KOVM" ] || susfs_bail "the module carries no vermagic"
+        [ "$KOVM" = "$KREL" ] || susfs_bail "vermagic mismatch - module says '$KOVM', this kernel is '$KREL'"
+        echo "--- vermagic matches this kernel: $KREL ---"
+
         echo "--- version sections (must be present, or a MODVERSIONS kernel refuses the load) ---"
         readelf -SW "$KO" | awk '/__versions|__version_ext/ {print "  "$2" size="$6}'
         VERS=$(readelf -SW "$KO" | grep -c "__versions" || true)
         if [ "${VERS:-0}" = "0" ]; then
-          echo "::error::no __versions section - check_modstruct_version() will take the try_to_force_load() path and this kernel has CONFIG_MODULE_FORCE_LOAD off, so the load would be refused with -ENOEXEC"
-          exit 1
+          susfs_bail "no __versions section - check_modstruct_version() will take the try_to_force_load() path and this kernel has CONFIG_MODULE_FORCE_LOAD off, so the load would be refused with -ENOEXEC"
         fi
         echo "--- module_layout CRC present? ---"
         if readelf -p __versions "$KO" 2>/dev/null | grep -q module_layout; then
@@ -2014,7 +2031,17 @@ runs:
         cp "$KO" "$SUSFS_OUT/susfs_guard_lkm-${OP_MODEL}-${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}.ko"
         echo "SUSFS_KO_DIR=$SUSFS_OUT" >> "$GITHUB_ENV"
         echo "SUSFS_KO_NAME=susfs_guard_lkm-${OP_MODEL}-${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}.ko" >> "$GITHUB_ENV"
-        echo "✅ susfs_guard_lkm.ko built against this kernel"
+
+        # The module rides inside the AK3 zip of the kernel it was built against, so the
+        # two cannot be separated or mispaired. anykernel.sh copies it out to storage on
+        # flash (best-effort), and the autoloader adopts it from there - or straight out
+        # of the zip when /data was not writable at flash time.
+        cp "$KO" "$AK3_FOLDER/susfs_guard_lkm.ko"
+        echo "bundled susfs_guard_lkm.ko into the AK3 zip"
+        (cd "$SUSFS_OUT" && sha256sum ./* > sha256sums.txt)
+        echo "SUSFS_KO_STATUS=ok ($KREL)" >> "$GITHUB_ENV"
+        echo "--- shipped ---"; ls -l "$SUSFS_OUT" | sed 's/^/  /'
+        echo "✅ built against this kernel and bundled into the AK3 zip"
         echo "::endgroup::"
 
     - name: Create Kernel ZIP
@@ -2219,8 +2246,11 @@ runs:
         compression-level: 0
         retention-days: 90
 
+    # The step now exits 0 even when it bails, so its conclusion is always 'success' and
+    # cannot gate this.  SUSFS_KO_NAME is written only on the success path, so its
+    # presence is the real signal.
     - name: Upload susfs_guard_lkm.ko
-      if: success() && steps.build_susfs_lkm.conclusion == 'success'
+      if: env.SUSFS_KO_NAME != ''
       uses: actions/upload-artifact@v7
       with:
         name: ${{ env.SUSFS_KO_NAME }}
@@ -2229,6 +2259,7 @@ runs:
         compression-level: 0
         retention-days: 90
         if-no-files-found: error
+
 
     - name: Upload ccache log
       if: success() && inputs.debug == 'true' && steps.build_kernel_step.conclusion == 'success'
