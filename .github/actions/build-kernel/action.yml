@@ -1087,6 +1087,14 @@ runs:
         echo "::group::Apply SUSFS"
         bash "$GITHUB_WORKSPACE/.github/scripts/apply_susfs.sh"
         if [ "${{ env.OP_NMS }}" = true ]; then
+          # SUSFS_ON=true makes the _hook step defer fix_selinux_seqno, because on
+          # the builders that patch SUSFS into the KernelSU tree the enable patch
+          # reverts KernelSU's generation tracking and is the last writer of
+          # kernel/selinux/rules.c. This fork carries SUSFS already and rewrites
+          # nothing, so the decision could be made earlier -- but it is made here
+          # for every builder alike, and assert-config refuses to end a build
+          # where it was never made at all.
+          bash "$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/apply_nomount_stack.sh" seqno
           bash "$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/apply_nomount_stack.sh" verify
         fi
         echo "::endgroup::"

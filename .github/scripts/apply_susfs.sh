@@ -221,6 +221,21 @@ CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=n
 CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
 CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
 EOF
+
+# SUSFS gained PRIORITY_UID_FILTER on 2026-11-01, upstream default y: it hides
+# user-defined uids from getpriority/setpriority/ioprio_get/ioprio_set for every
+# process with uid >= 10000. NoMount already closes that oracle (uidconceal, plus
+# the fgetpriority LKM), so a second filter on the same four syscalls is duplicate
+# coverage and is pinned off rather than left to its default.
+#
+# Conditional because the check below rejects a symbol this fork does not define,
+# and BakaSU has not synced the option yet. A no-op until it does.
+if grep -qE '^[[:space:]]*config[[:space:]]+KSU_SUSFS_PRIORITY_UID_FILTER([[:space:]]|$)' \
+    "$KSU_FOLDER/kernel/Kconfig"; then
+  echo "CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER=n" >> "$DEFCONFIG"
+  echo "SUSFS: PRIORITY_UID_FILTER pinned off (NoMount owns getpriority/ioprio)"
+fi
+
 missing=0
 while IFS= read -r line; do
   sym="${line%%=*}"; sym="${sym#CONFIG_}"
@@ -229,6 +244,23 @@ while IFS= read -r line; do
   missing=$((missing + 1))
 done < <(grep -E '^CONFIG_KSU_SUSFS' "$DEFCONFIG")
 [ "$missing" -eq 0 ] || exit 1
+
+# The other direction, which is the one that bites quietly: an option this SUSFS
+# version DEFINES but the block above never writes takes its own Kconfig default,
+# and nothing says so. That is exactly how KSU_SUSFS_PRIORITY_UID_FILTER (default
+# y) would have shipped enabled -- the check above only ever looked at what we
+# write, never at what exists. Ported from OnePlus-KsuNext_NMS, where the
+# equivalent gate is what caught it.
+undecided="$(comm -13 \
+  <(grep -E '^CONFIG_KSU_SUSFS' "$DEFCONFIG" | sed 's/^CONFIG_//; s/=.*//' | sort -u) \
+  <(grep -oE '^[[:space:]]*config[[:space:]]+KSU_SUSFS[A-Z_]*' "$KSU_FOLDER/kernel/Kconfig" \
+      | awk '{print $2}' | sort -u))"
+if [ -n "$undecided" ]; then
+  echo "::error::apply_susfs: SUSFS $SUSVER defines options this builder never writes, so they would take their Kconfig default:"
+  echo "$undecided" | sed 's/^/     /'
+  echo "::error::Add each one to the SUSFS defconfig block in this script with an explicit y or n."
+  exit 1
+fi
 
 for sym in SUSFS_IS_INODE_SUS_MAP susfs_is_current_proc_umounted_app; do
   grep -rqs "$sym" fs include/linux || { echo "::error::apply_susfs: $sym never reached the tree"; exit 1; }
