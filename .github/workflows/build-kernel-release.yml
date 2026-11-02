@@ -983,6 +983,24 @@ jobs:
         run: |
           echo "=== Start building the release notes ==="
 
+          # Three places in these notes name the manager assets, and upstream
+          # stopped building the spoofed one (Baka-SU/BakaSU 01c11c7). Resolve the
+          # wording once here so the summary table, the step-by-step and the
+          # Manager Applications section cannot contradict the actual assets.
+          if [ -n "${MGR_SPOOFED:-}" ]; then
+            MGR_TABLE_ASSET='`BakaSU_<build>_normal.apk` or `_spoofed.apk`'
+            MGR_TABLE_HOW='install **one** - see *Manager Applications*'
+            MGR_INSTALL_LINE="Install the BakaSU Manager APK from this release's Assets - plain or spoofed, one of the two."
+          elif [ -n "${MGR_BUILD:-}" ]; then
+            MGR_TABLE_ASSET='`BakaSU_<build>_normal.apk`'
+            MGR_TABLE_HOW='see *Manager Applications*'
+            MGR_INSTALL_LINE="Install the BakaSU Manager APK from this release's Assets."
+          else
+            MGR_TABLE_ASSET='not attached to this release'
+            MGR_TABLE_HOW='see *Manager Applications*'
+            MGR_INSTALL_LINE="Install a BakaSU Manager APK matching the driver version - see *Manager Applications*."
+          fi
+
           declare -A device_info
 
           JSON_BUILD_DATA=$(jq -c '.' ./downloaded-artifacts/matrix.json)
@@ -1034,7 +1052,7 @@ jobs:
           | | Download | Where it's from | How to install |
           |---|---|---|---|
           | 1️⃣ **Kernel** | \`AK3_<device>_…zip\` (pick yours below) | built by this repo's CI | Kernel Flasher / BakaSU Manager |
-          | 2️⃣ **BakaSU Manager** | \`BakaSU_<build>_normal.apk\` or \`_spoofed.apk\` | upstream CI, fetched at release time | install **one** - see *Manager Applications* |
+          | 2️⃣ **BakaSU Manager** | $MGR_TABLE_ASSET | upstream CI, fetched at release time | $MGR_TABLE_HOW |
           | 3️⃣ **NoMount Suite** | \`$MOD_ASSET\` | the separate [NoMount project](${{ github.server_url }}/${MOD_REPO}/releases/latest) | BakaSU Manager → Modules → Install from storage |
 
           > The kernel has NoMount **compiled in but dormant** — the **NoMount Suite module activates it**. You need both.
@@ -1272,7 +1290,7 @@ jobs:
           ### Via Kernel Flasher
           1. Download the correct AnyKernel3 ZIP for your device.
           2. Flash the ZIP to the active slot using Kernel Flasher.
-          3. Install the BakaSU Manager APK from this release's Assets - plain or spoofed, one of the two.
+          3. $MGR_INSTALL_LINE
           4. Open the BakaSU app.
           5. In **BakaSU Manager**, install the **NoMount Suite** module (Modules → Install from storage → the NoMount Suite ZIP from this release). Remove any existing metamodule and reboot first if you have one.
           6. Reboot the device.
