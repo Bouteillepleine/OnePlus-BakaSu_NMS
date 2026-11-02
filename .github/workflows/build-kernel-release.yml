@@ -1231,7 +1231,7 @@ jobs:
           
           ### Official Manager
           EOF
-          if [ -n "${MGR_BUILD:-}" ]; then
+          if [ -n "${MGR_BUILD:-}" ] && [ -n "${MGR_SPOOFED:-}" ]; then
           NPKG=""; [ -z "${MGR_NORMAL_PKG:-}" ] || NPKG=" (\`$MGR_NORMAL_PKG\`)"
           SPKG=""; [ -z "${MGR_SPOOFED_PKG:-}" ] || SPKG=" (\`$MGR_SPOOFED_PKG\`)"
           cat << EOF >> release_notes.md
@@ -1240,9 +1240,16 @@ jobs:
             - \`${MGR_SPOOFED}\`: the same app under a randomised package name${SPKG}, so a scan of installed packages does not find a known root manager
             Upstream ships both under the same filename, so they are renamed here. Both carry the same signing certificate, which is the only thing the kernel checks. arm64-v8a only.
           EOF
+          elif [ -n "${MGR_BUILD:-}" ]; then
+          NPKG=""; [ -z "${MGR_NORMAL_PKG:-}" ] || NPKG=" (\`$MGR_NORMAL_PKG\`)"
+          cat << EOF >> release_notes.md
+          - **BakaSU Manager** build **${MGR_BUILD}**, fetched from the upstream [Build Manager run ${MGR_RUN}](https://github.com/Baka-SU/BakaSU/actions/runs/${MGR_RUN}) at commit \`${MGR_SHA:0:8}\`${MGR_NOTE}:
+            - \`${MGR_NORMAL}\`: the plain package${NPKG}, arm64-v8a only
+            No spoofed package is attached. Upstream dropped that build in [\`01c11c7\`](https://github.com/Baka-SU/BakaSU/commit/01c11c7) on 2026-10-31 — Magisk removed Hide Magisk in v31.1, and upstream points at [HMA](https://github.com/Dr-TSNG/Hide-My-Applist) or its fork [HMA-OSS](https://github.com/frknkrc44/HMA-OSS) for hiding the manager from an installed-package scan.
+          EOF
           else
           cat << EOF >> release_notes.md
-          - **BakaSU Manager**: not attached to this release, upstream had no manager build to pair with driver ${ksu_ver_global}. Take the \`Manager-release\` and \`Spoofed-Manager-release\` artifacts of the matching commit from the [upstream Build Manager workflow](https://github.com/Baka-SU/BakaSU/actions/workflows/build-manager.yml).
+          - **BakaSU Manager**: not attached to this release, upstream had no manager build to pair with driver ${ksu_ver_global}. Take the \`Manager-release\` artifact of the matching commit from the [upstream Build Manager workflow](https://github.com/Baka-SU/BakaSU/actions/workflows/build-manager.yml).
           EOF
           fi
           cat << EOF >> release_notes.md
