@@ -179,8 +179,23 @@ jobs:
             echo "ℹ️  No target model selected. Building all configs matching op_model='$input'."
           fi
 
+          # Two configs for one device that resolve to the same kernel sublevel
+          # build the same AK3 zip, collide on its name and one silently replaces
+          # the other - 82 legs gave 81 zips in run 41434571727. Drop the
+          # redundant leg here rather than spend 25 minutes on it; the script
+          # keeps the pinned config and is fail-open on anything it cannot
+          # resolve. See .github/scripts/dedupe_matrix.py.
+          echo "$filtered" > matrix_filtered.json
+          if python3 -I .github/scripts/dedupe_matrix.py matrix_filtered.json \
+               -o matrix_deduped.json --manifests manifests; then
+            filtered=$(cat matrix_deduped.json)
+          else
+            echo "::warning::matrix dedupe failed; keeping every leg"
+          fi
+          rm -f matrix_filtered.json matrix_deduped.json
+
           count=$(jq 'length' <<<"$filtered")
-          
+
           filtered=$(echo "$filtered" | jq '
             sort_by(
               (.os_version | gsub("A"; "") | tonumber) * -1,
