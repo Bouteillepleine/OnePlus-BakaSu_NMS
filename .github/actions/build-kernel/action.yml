@@ -911,6 +911,10 @@ runs:
         sed -i 's/protected_modules = \[.*\]/protected_modules = []/' common/modules.bzl || true
         echo "::endgroup::"
 
+    - name: Fix OPlus duplicate exports
+      shell: bash
+      run: bash "$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/fix_oplus_duplicate_exports.sh"
+
     - name: Add BakaSU
       shell: bash
       # Both spellings, same as the validation gate: this step CLONES KernelSU, and
