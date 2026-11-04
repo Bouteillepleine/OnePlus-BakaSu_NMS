@@ -773,6 +773,9 @@ runs:
         echo "kernel_patches ref: ${_pref:-main}"
 
         SUSFS_REF='${{ inputs.susfs_ref }}'
+        # Normalised here too: the caller passes susfs_ref through untouched,
+        # and an empty value never survives a workflow_dispatch.
+        case "$SUSFS_REF" in off|none|-1) SUSFS_REF="" ;; esac
         SUSFS_URL="https://gitlab.com/simonpunk/susfs4ksu.git"
         SUSFS_BRANCH="gki-${ANDROID_VER}-${KERNEL_VER}"
         SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"

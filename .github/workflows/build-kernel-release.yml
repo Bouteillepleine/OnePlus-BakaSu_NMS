@@ -75,7 +75,7 @@ on:
         type: boolean
         default: false
       susfs_ref:
-        description: 'simonpunk/susfs4ksu ref to patch SUSFS into every kernel. auto = the gki branch matching each device, a branch/tag/40-char SHA pins it (a release you want to reproduce should pass a SHA), empty = build without SUSFS.'
+        description: 'simonpunk/susfs4ksu ref to patch SUSFS into every kernel. auto = the gki branch matching each device, a branch/tag/40-char SHA pins it (a release you want to reproduce should pass a SHA), off (also none or -1) = build without SUSFS.'
         required: false
         type: string
         default: auto
@@ -327,6 +327,11 @@ jobs:
           echo "nomount_version=$nomount_version" >> "$GITHUB_OUTPUT"
 
           SUSFS_REF='${{ inputs.susfs_ref }}'
+          # An empty susfs_ref means no SUSFS, but a workflow_dispatch string
+          # input that arrives empty is replaced by its declared default, so
+          # that branch was unreachable from the UI and the API alike. Take an
+          # explicit sentinel instead; -1 is what the standalone builder uses.
+          case "$SUSFS_REF" in off|none|-1) SUSFS_REF="" ;; esac
           susfs_plan="off"
           susfs_version=""
           if [ -n "$SUSFS_REF" ]; then
