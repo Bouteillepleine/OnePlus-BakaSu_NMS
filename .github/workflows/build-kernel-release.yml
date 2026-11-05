@@ -75,12 +75,12 @@ on:
         type: boolean
         default: false
       enable_bore:
-        description: 'Apply the KMI-safe BORE scheduler (6.12/6.6/6.1/5.15/5.10). Static-verified against every distinct OnePlus tree: 0 rejects, 0 dangling refs, 0 export delta, sched_entity KABI slot 1 free. Measured 0 CRC drift across 6 BORE-on/off pairs. BOOT-VERIFIED on OP15 6.12.69 only; other trees are compile+ABI verified.'
+        description: 'Apply the KMI-safe BORE scheduler (6.12/6.6/6.1/5.15/5.10).'
         required: false
         type: boolean
         default: true
       bore_default_on:
-        description: 'Start BORE active (sched_bore=1). Default false: BORE compiles in but stays dormant, togglable at /proc/sys/kernel/sched_bore. BORE-on bootlooped an OP15 once on 6.12.23 (suspected fair<->SCX handover), so on-by-default is opt-in.'
+        description: 'Start BORE active (sched_bore=1).'
         required: false
         type: boolean
         default: true
