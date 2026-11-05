@@ -41,6 +41,16 @@ inputs:
     required: false
     type: boolean
     default: false
+  enable_bore:
+    description: 'Apply the KMI-safe BORE scheduler (6.12/6.6/6.1/5.15/5.10). Static-verified against every distinct OnePlus tree: 0 rejects, 0 dangling refs, 0 export delta, sched_entity KABI slot 1 free. Measured 0 CRC drift across 6 BORE-on/off pairs. BOOT-VERIFIED on OP15 6.12.69 only; other trees are compile+ABI verified.'
+    required: false
+    type: boolean
+    default: false
+  bore_default_on:
+    description: 'Start BORE active (sched_bore=1). Default false: BORE compiles in but stays dormant, togglable at /proc/sys/kernel/sched_bore. BORE-on bootlooped an OP15 once on 6.12.23 (suspected fair<->SCX handover), so on-by-default is opt-in.'
+    required: false
+    type: boolean
+    default: false
   susfs_ref:
     description: 'simonpunk/susfs4ksu ref to patch SUSFS into the kernel from. auto = the gki-<android>-<kernel> branch of each device, a branch/tag/40-char SHA pins it, empty = build without SUSFS. It goes in after the NoMount stack; hunks that no longer fit are re-anchored by .github/scripts/susfs_patch_surgery.py and the NoMount verifier runs again afterwards.'
     required: false
@@ -1828,6 +1838,137 @@ runs:
           patch -p1 < "$DEBLOAT_PATCH"
         fi
 
+    - name: 🧠 Apply BORE scheduler
+      shell: bash
+      if: ${{ inputs.enable_bore == true || inputs.enable_bore == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Apply BORE scheduler"
+
+        # All five versions are wired. Static-verified 2026-11-06 against every
+        # distinct OnePlus tree in configs/a16 (28 trees): 0 rejects, 0 dangling
+        # refs to ifdef'd-away symbols, 0 export delta, and sched_entity KABI
+        # slot 1 free everywhere (all four slots plain ANDROID_KABI_RESERVE).
+        case "${KERNEL_VER}" in
+          6.12|6.6|6.1|5.15|5.10) ;;
+          *) echo "   no BORE patch for ${KERNEL_VER}; skipping"; echo "::endgroup::"; exit 0 ;;
+        esac
+
+        PATCH="$BOUTEILLE_KERNEL_PATCHES_FOLDER/experimental/bore_${KERNEL_VER}.patch"
+        [ -f "$PATCH" ] || { echo "::error::no BORE patch at $PATCH"; exit 1; }
+
+        cd "$COMMON_KERNEL_FOLDER"
+
+        if grep -q "CONFIG_SCHED_BORE" kernel/sched/sched.h 2>/dev/null; then
+          echo "   BORE already present in this tree, skipping"
+          echo "::endgroup::"
+          exit 0
+        fi
+
+        # EEVDF fix-A carries GKI's base_slice as mid-hunk context. OnePlus trees
+        # ship 750000ULL / "0.75 msec", which rejects, and fuzz cannot repair
+        # mid-hunk context. BORE overrides base_slice to nsecs_per_tick anyway, so
+        # normalising to GKI canon only rewrites dead code. Needed on BOTH EEVDF
+        # versions: without it 6.6 rejects fix-A on all three OnePlus trees exactly
+        # as 6.12 does. No-op on the CFS trio (6.1/5.15/5.10), which have no
+        # base_slice at all.
+        sed -i 's/750000ULL/700000ULL/g; s/0\.75 msec/0.70 msec/g' kernel/sched/fair.c
+
+        patch -p1 --ignore-whitespace -F3 < "$PATCH"
+
+        left="$(find . -name '*.rej' | sort)"
+        if [ -n "$left" ]; then
+          echo "::error::BORE left rejects:"
+          echo "$left" | sed 's/^/     /'
+          exit 1
+        fi
+        find . -name '*.orig' -delete
+
+        # set_protect_slice() is part of the BORE port but was moved out of the
+        # patch into a sed: OnePlus vendor trees perturb its surrounding context
+        # per-SoC and the hunk rejects on sm8850/canoe. With RUN_TO_PARITY off
+        # the function falls back to normalized_sysctl_sched_base_slice as the
+        # minimum quantum -- a frozen 700us that BORE never drives -- so the
+        # protection window would stop tracking BORE's base slice. The target
+        # line is unique. Mirrors kernel_patches/.github/workflows/gki-build-bore.yml.
+        if grep -q 'u64 slice = normalized_sysctl_sched_base_slice;' kernel/sched/fair.c; then
+          sed -i -E 's/^([[:space:]]*)u64 slice = normalized_sysctl_sched_base_slice;/\1u64 slice = sysctl_sched_base_slice;/' kernel/sched/fair.c
+          grep -q 'u64 slice = sysctl_sched_base_slice;' kernel/sched/fair.c \
+            || { echo "::error::set_protect_slice transform did not apply"; exit 1; }
+          echo "   set_protect_slice() now tracks sysctl_sched_base_slice"
+        else
+          echo "   set_protect_slice() not present in this tree, skipping"
+        fi
+
+        # BORE-on from boot bootlooped an OP15 once (6.12.23/RSKSU); the KABI slot
+        # was cleared by BTF, so the suspect is BORE's fair.c hooks during the
+        # fair<->SCX handover when oplusHmbirdBpfManager attaches ~24s in. Default
+        # the runtime switch off: BORE still compiles in and every hook is built,
+        # but it stays dormant until `echo 1 > /proc/sys/kernel/sched_bore`. That
+        # both ships a bootable kernel and bisects the hang -- if it still loops
+        # with sched_bore=0, the fault is in the always-run storage/fork/init path,
+        # not the scheduling logic. Only the initialiser changes, so CRCs are
+        # untouched and the canonical patch stays as-is.
+        # The definition lives in kernel/sched/bore.c on the EEVDF pair (6.12/6.6)
+        # but inline in kernel/sched/fair.c on the CFS trio, and the type is u8
+        # except on 5.15/5.10 where it is bool. Find it rather than assume.
+        BORE_SRC=""
+        for cand in "$COMMON_KERNEL_FOLDER/kernel/sched/bore.c" "$COMMON_KERNEL_FOLDER/kernel/sched/fair.c"; do
+          if [ -f "$cand" ] && grep -qE '^(u8|bool)[[:space:]]+__read_mostly[[:space:]]+sched_bore[[:space:]]*=[[:space:]]*1;' "$cand"; then
+            BORE_SRC="$cand"; break
+          fi
+        done
+        [ -n "$BORE_SRC" ] || { echo "::error::sched_bore definition not found after patching"; exit 1; }
+        if [ "${{ inputs.bore_default_on }}" = "true" ]; then
+          echo "   sched_bore defaults to 1 (active from boot)"
+        else
+          sed -i -E 's/^((u8|bool)[[:space:]]+__read_mostly[[:space:]]+sched_bore[[:space:]]*=[[:space:]]*)1;/\10;/' "$BORE_SRC"
+          grep -qE '^(u8|bool)[[:space:]]+__read_mostly[[:space:]]+sched_bore[[:space:]]*=[[:space:]]*0;' "$BORE_SRC" \
+            || { echo "::error::could not default sched_bore to 0 in $BORE_SRC"; exit 1; }
+          echo "   sched_bore defaults to 0 in ${BORE_SRC##*/} (dormant; enable at /proc/sys/kernel/sched_bore)"
+        fi
+
+        # 5.10 only: the dequeue_task_fair BORE block was removed from the patch.
+        # OnePlus 5.10 trees carry an OPLUS_SCHED_TUNE block between util_est_dequeue()
+        # and for_each_sched_entity() where the patch expects a blank line, so patch -F3
+        # dropped the context and applied the hunk with fuzz 3 INTO the function
+        # declarator -> "fair.c:5937 expected function body". 0 rejects, so the reject
+        # assertion never fired. Anchored on util_est_dequeue(&rq->cfs, p), unique in all
+        # three OnePlus 5.10 trees and in vanilla ACK 5.10.
+        if [ "${KERNEL_VER}" = "5.10" ]; then
+          FAIRC="$COMMON_KERNEL_FOLDER/kernel/sched/fair.c"
+          n=$(grep -c 'util_est_dequeue(&rq->cfs, p);' "$FAIRC")
+          [ "$n" = "1" ] || { echo "::error::dequeue anchor not unique in fair.c ($n matches)"; exit 1; }
+          if awk '/util_est_dequeue\(&rq->cfs, p\);/{getline; if ($0 ~ /^#ifdef CONFIG_SCHED_BORE/) f=1} END{exit !f}' "$FAIRC"; then
+            echo "   dequeue_task_fair BORE block already present"
+          else
+            awk '
+            /util_est_dequeue\(&rq->cfs, p\);/ && !ins {
+              print
+              print "#ifdef CONFIG_SCHED_BORE"
+              print "\tif (task_sleep) {"
+              print "\t\tcfs_rq = cfs_rq_of(se);"
+              print "\t\tif (cfs_rq->curr == se)"
+              print "\t\t\tupdate_curr(cfs_rq);"
+              print "\t\trestart_burst(se);"
+              print "\t}"
+              print "#endif // CONFIG_SCHED_BORE"
+              ins=1; next
+            }
+            {print}' "$FAIRC" > "$FAIRC.new" && mv "$FAIRC.new" "$FAIRC"
+            awk '/util_est_dequeue\(&rq->cfs, p\);/{getline; if ($0 ~ /^#ifdef CONFIG_SCHED_BORE/) f=1} END{exit !f}' "$FAIRC" \
+              || { echo "::error::dequeue_task_fair BORE block did not land"; exit 1; }
+            echo "   dequeue_task_fair BORE block inserted (5.10)"
+          fi
+        fi
+
+        DEFCONFIG="$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
+        if ! grep -q "^CONFIG_SCHED_BORE=" "$DEFCONFIG"; then
+          echo "CONFIG_SCHED_BORE=y" >> "$DEFCONFIG"
+        fi
+        echo "   BORE applied, CONFIG_SCHED_BORE=y"
+        echo "::endgroup::"
+
     - name: 🔧 Add ADIOS I/O Scheduler
       shell: bash
       if: ${{ inputs.enable_adios == true || inputs.enable_adios == 'true' }}
@@ -2132,6 +2273,14 @@ runs:
           grep -q "^${sym}=y" "$OUT/.config" \
             || { echo "::error::${sym} was dropped by olddefconfig (not defined by the KSU source?)"; exit 1; }
         done
+
+        case "${KERNEL_VER}" in
+          6.12|6.6|6.1|5.15|5.10)
+            if [ "${{ inputs.enable_bore }}" = "true" ]; then
+              grep -q '^CONFIG_SCHED_BORE=y$' "$OUT/.config" \
+                || { echo "::error::CONFIG_SCHED_BORE was dropped by olddefconfig"; exit 1; }
+            fi ;;
+        esac
 
         if [ "$AFDO_ON" = true ]; then
           grep -q '^CONFIG_AUTOFDO_CLANG=y$' "$OUT/.config" \
