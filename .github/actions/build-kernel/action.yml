@@ -2123,6 +2123,11 @@ runs:
 
         make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" O="$OUT" olddefconfig
 
+        for sym in CONFIG_SECCOMP CONFIG_SECCOMP_FILTER; do
+          grep -qx "${sym}=y" "$OUT/.config" \
+            || { echo "::error::${sym} must remain enabled for the Android app sandbox"; exit 1; }
+        done
+
         for sym in CONFIG_KSU CONFIG_KSU_MULTI_MANAGER_SUPPORT CONFIG_KSU_TOOLKIT_SUPPORT; do
           grep -q "^${sym}=y" "$OUT/.config" \
             || { echo "::error::${sym} was dropped by olddefconfig (not defined by the KSU source?)"; exit 1; }
