@@ -42,15 +42,15 @@ inputs:
     type: boolean
     default: false
   enable_bore:
-    description: 'Apply the KMI-safe BORE scheduler (6.12/6.6/6.1/5.15/5.10). Static-verified against every distinct OnePlus tree: 0 rejects, 0 dangling refs, 0 export delta, sched_entity KABI slot 1 free. Measured 0 CRC drift across 6 BORE-on/off pairs. BOOT-VERIFIED on OP15 6.12.69 only; other trees are compile+ABI verified.'
+    description: 'Apply the KMI-safe BORE scheduler (6.12/6.6/6.1/5.15/5.10). ON by default. Static-verified on every distinct OnePlus tree: 0 rejects, 0 dangling refs, 0 export delta, sched_entity KABI slot 1 free; 0 CRC drift across 6 BORE-on/off pairs. Boot-verified on OP15 6.12.69; other trees are compile+ABI verified only.'
     required: false
     type: boolean
-    default: false
+    default: true
   bore_default_on:
-    description: 'Start BORE active (sched_bore=1). Default false: BORE compiles in but stays dormant, togglable at /proc/sys/kernel/sched_bore. BORE-on bootlooped an OP15 once on 6.12.23 (suspected fair<->SCX handover), so on-by-default is opt-in.'
+    description: 'Start BORE active (sched_bore=1) rather than dormant. ON by default. Either way BORE is compiled in and togglable at runtime via /proc/sys/kernel/sched_bore (no reboot).'
     required: false
     type: boolean
-    default: false
+    default: true
   susfs_ref:
     description: 'simonpunk/susfs4ksu ref to patch SUSFS into the kernel from. auto = the gki-<android>-<kernel> branch of each device, a branch/tag/40-char SHA pins it, empty = build without SUSFS. It goes in after the NoMount stack; hunks that no longer fit are re-anchored by .github/scripts/susfs_patch_surgery.py and the NoMount verifier runs again afterwards.'
     required: false
