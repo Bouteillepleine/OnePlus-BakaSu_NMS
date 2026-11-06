@@ -36,7 +36,7 @@ on:
           - android12-5.10
         default: A16
       op_target_model:
-        description: 'Optional exact/prefix model: OP12, OP13-CPH, OP-NORD-4, OP12-6.1.118. Case-sensitive. Empty = all.'
+        description: 'Optional exact/prefix model, or a comma-separated list: OP12, OP13-CPH, OP-NORD-4, OP12-6.1.118. Case-sensitive. Empty = all.'
         required: false
         type: string
         default: ''
@@ -181,9 +181,13 @@ jobs:
 
           if [ -n "$target_model" ]; then
             echo "🎯 Target model filter enabled: $target_model"
-            echo "   Matching exact model OR versioned model prefix."
+            echo "   Matching exact model OR versioned model prefix; comma-separated list allowed."
             filtered=$(echo "$filtered" | jq -c --arg target "$target_model" '
-              map(select(.model == $target or (.model | startswith($target + "-"))))
+              ($target | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))) as $targets
+              | map(select(. as $row
+                  | $targets
+                  | map(. as $t | $row.model == $t or ($row.model | startswith($t + "-")))
+                  | any))
             ')
           else
             echo "ℹ️  No target model selected. Building all configs matching op_model='$input'."
