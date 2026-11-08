@@ -24,9 +24,12 @@ cp "$SUSFS_FOLDER/kernel_patches/include/linux/"* include/linux/
 
 SUSVER="$(grep '#define SUSFS_VERSION' include/linux/susfs.h | awk -F'"' '{print $2}')"
 [ -n "$SUSVER" ] || { echo "::error::apply_susfs: could not read SUSFS_VERSION from include/linux/susfs.h"; exit 1; }
+# v2.4.0 added: 50_add_susfs_in_gki-<kmi>.patch is byte-identical to the v2.3.0
+# one on all five KMIs, so the reject record in apply_susfs_kernel.sh still fits.
+# The label moved, the kernel side did not.
 case "$SUSVER" in
-  v2.3.0) ;;
-  *) echo "::error::apply_susfs: SUSFS $SUSVER has not been checked against this builder (v2.3.0 only); pin susfs_ref to a known commit or update the scripts"; exit 1 ;;
+  v2.3.0|v2.4.0) ;;
+  *) echo "::error::apply_susfs: SUSFS $SUSVER has not been checked against this builder (v2.3.0 and v2.4.0 only); pin susfs_ref to a known commit or update the scripts"; exit 1 ;;
 esac
 echo "SUSVER=$SUSVER" >> "$GITHUB_ENV"
 echo "$SUSVER" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
