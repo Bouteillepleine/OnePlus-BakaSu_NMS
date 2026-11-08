@@ -34,7 +34,7 @@ Every release contains two things. Flash the kernel first, then add NoMount Suit
 > [!IMPORTANT]
 > **The kernel on its own does nothing visible.** NoMount is *compiled in* but stays **dormant** until the **NoMount Suite** module activates it. NoMount Suite is the part that carries your injection rules, the WebUI, and the spoofing. Think of it like a Magisk/KSU module. **You need both.**
 
-## SUSFS
+## SUSFS (v2.4.0)
 
 Every kernel has **SUSFS** compiled in, patched from [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu)
 at build time (the version is in the release notes and the build summary).
@@ -42,9 +42,8 @@ at build time (the version is in the release notes and the build summary).
 The `susfs_ref` workflow input picks the susfs4ksu ref: `auto` follows the gki branch of each device,
 a 40-char SHA pins a release, empty builds without SUSFS.
 
-**SUSFS versions this builder accepts:** `v2.3.0`, `v2.4.0`.
-Anything else fails the build rather than producing a half-patched kernel, so if `auto`
-picks up a newer susfs before this repo catches up, pin `susfs_ref` to a known commit.
+SUSFS `v2.3.0` and `v2.4.0` are accepted. A newer one fails the build rather than producing a
+half-patched kernel, so pin `susfs_ref` if `auto` moves ahead of this repo.
 
 ---
 
