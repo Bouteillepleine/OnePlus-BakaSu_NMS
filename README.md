@@ -42,6 +42,10 @@ at build time (the version is in the release notes and the build summary).
 The `susfs_ref` workflow input picks the susfs4ksu ref: `auto` follows the gki branch of each device,
 a 40-char SHA pins a release, empty builds without SUSFS.
 
+**SUSFS versions this builder accepts:** `v2.3.0`, `v2.4.0`.
+Anything else fails the build rather than producing a half-patched kernel, so if `auto`
+picks up a newer susfs before this repo catches up, pin `susfs_ref` to a known commit.
+
 ---
 
 ## Why NoMount
