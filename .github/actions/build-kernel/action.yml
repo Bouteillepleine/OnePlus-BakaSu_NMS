@@ -2032,6 +2032,27 @@ runs:
           ;;
         esac
 
+        # BORE 7.0.x on 6.12 ships three transforms outside the patch, because their
+        # context splits across the OnePlus trees: 6 of the 11 carry GKI's
+        # run-to-parity rework and 5 do not, and only 2 have update_curr_task(p,...)
+        # where upstream puts the update_curr hook. One patch cannot match all of
+        # them, so kernel_patches ships scripts/bore_612_surgery.py.
+        # The 7.0.x marker alone decides. A missing script is FATAL, not a skip:
+        # update_curr_bore() is applied only by the surgery, so skipping it builds
+        # a BORE that compiles and never accumulates burst time.
+        SURGERY="$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/bore_612_surgery.py"
+        if [ "${KERNEL_VER}" = "6.12" ] \
+           && grep -q 'sched_burst_protect_slice_cond_key' "$COMMON_KERNEL_FOLDER/kernel/sched/bore.c" 2>/dev/null; then
+          [ -f "$SURGERY" ] || { echo "::error::BORE 7.0.x needs scripts/bore_612_surgery.py from this patches_ref"; exit 1; }
+          cd "$COMMON_KERNEL_FOLDER"
+          python3 -I "$SURGERY" || { echo "::error::BORE 6.12 surgery failed"; exit 1; }
+          VERIFY="$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/verify_bore_612.py"
+          if [ -f "$VERIFY" ]; then
+            python3 -I "$VERIFY" "$COMMON_KERNEL_FOLDER" \
+              || { echo "::error::BORE hook placement verification failed"; exit 1; }
+          fi
+        fi
+
         DEFCONFIG="$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
         if ! grep -q "^CONFIG_SCHED_BORE=" "$DEFCONFIG"; then
           echo "CONFIG_SCHED_BORE=y" >> "$DEFCONFIG"
