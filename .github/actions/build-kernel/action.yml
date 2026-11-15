@@ -1159,6 +1159,13 @@ runs:
           # for every builder alike, and assert-config refuses to end a build
           # where it was never made at all.
           bash "$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/apply_nomount_stack.sh" seqno
+          # susfs 9b0b13f moved KernelSU's setprocattr hook into
+          # security/selinux/hooks.c and reduced selinux_hide.c to a shell, which
+          # deletes the function the KernelSU-side timing probe lives in. postsusfs
+          # re-applies the equalisation there when that shape is present and is a
+          # no-op when it is not; the verify below refuses a build where NEITHER
+          # hook carries a probe, so the DANGER row cannot ship silently.
+          bash "$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/apply_nomount_stack.sh" postsusfs
           bash "$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/apply_nomount_stack.sh" verify
         fi
         echo "::endgroup::"
