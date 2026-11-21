@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-for v in KERNEL_PLATFORM_FOLDER COMMON_KERNEL_FOLDER SUSFS_FOLDER KSU_FOLDER ARTIFACTS_FOLDER OP_MODEL OP_OS_VERSION ANDROID_VER KERNEL_VER GITHUB_ENV; do
+for v in KERNEL_PLATFORM_FOLDER COMMON_KERNEL_FOLDER SUSFS_FOLDER KSU_FOLDER ARTIFACTS_FOLDER OP_MODEL OP_OS_VERSION ANDROID_VER KERNEL_VER GITHUB_ENV BOUTEILLE_KERNEL_PATCHES_FOLDER; do
   [ -n "${!v:-}" ] || { echo "::error::apply_susfs: $v is not set"; exit 1; }
 done
 
-SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SURGERY="$SCRIPTS_DIR/susfs_patch_surgery.py"
-[ -f "$SURGERY" ] || { echo "::error::apply_susfs: $SURGERY is missing"; exit 1; }
+# The one surgery every builder runs, from the patches_ref this build uses.
+SURGERY="$BOUTEILLE_KERNEL_PATCHES_FOLDER/scripts/susfs_patch_surgery.py"
+[ -f "$SURGERY" ] || { echo "::error::apply_susfs: $SURGERY is missing from this patches_ref"; exit 1; }
 
 SUSFS_BRANCH="${SUSFS_KERNEL_BRANCH:-gki-${ANDROID_VER}-${KERNEL_VER}}"
 SUSFS_PATCH_SRC="$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${SUSFS_BRANCH}.patch"
