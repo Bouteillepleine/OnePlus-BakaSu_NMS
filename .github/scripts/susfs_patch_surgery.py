@@ -98,6 +98,45 @@ def write(path, s):
 GUARD_MAP = '#ifdef CONFIG_KSU_SUSFS_SUS_MAP'
 ENDIF_MAP = '#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MAP'
 
+DECL_RE = re.compile(
+    r'^[ \t]+(?:const\s+|volatile\s+|register\s+|static\s+|extern\s+)*'
+    r'(?:struct|union|enum|unsigned|signed|char|short|int|long|float|double|bool|'
+    r'void|u8|u16|u32|u64|s8|s16|s32|s64|[A-Za-z_][A-Za-z0-9_]*_t)\b')
+
+PP_RE = re.compile(r'^[ \t]*#\s*(if|ifdef|ifndef|else|elif|endif)\b')
+
+
+def body_decl_end(lines):
+    """Where susfs's guard belongs: (index, indent) of the first line of a
+    function body that is neither blank, nor a top-of-body declaration, nor the
+    preprocessor scaffolding around one. None when the body opens with a
+    statement, so the caller declines rather than guessing.
+
+    The preprocessor part is not cosmetic. OnePlus's 5.10/5.15/6.1 show_smap()
+    declares `char buf[256]` inside `#if defined(CONFIG_CONT_PTE_HUGEPAGE)`,
+    so stopping at the `#if` put the guard above a declaration -- statement
+    first, declaration after, on any tree that sets that config -- and took the
+    `#if` line's indent, which is none, so the guard came out flush left. Walk
+    through the scaffolding and take the indent from the declarations instead.
+    """
+    ind, seen, cont = None, False, False
+    for i, l in enumerate(lines):
+        if not l.strip() or PP_RE.match(l):
+            continue
+        if cont:
+            cont = not l.rstrip().endswith(';')
+            continue
+        if DECL_RE.match(l):
+            ind, seen = indent_of(l), True
+            cont = not l.rstrip().endswith(';')
+            continue
+        return (i, ind if ind is not None else indent_of(l)) if seen else None
+    return None
+
+
+def indent_of(line):
+    return re.match(r'^[ \t]*', line).group(0)
+
 
 def function_span(s, name):
     m = re.search(r'^[^\n;]*\b' + re.escape(name) + r'\s*\([^;{}]*\)\s*\n\{\n', s, re.M)
@@ -177,15 +216,27 @@ def insert_rollup_bypass(tree):
               if re.match(r'^\t+smap_gather_stats\(vma, &mss, 0\);$', lines[i])), None)
     if g is None:
         return None
+    # Not the loop head itself: a stack applied before susfs opens this block
+    # with its own declarations -- pathhide puts `extern bool
+    # pathhide_match_file` and a `bool ph_hidden = ...` there -- and a guard
+    # above them makes both declarations-after-statement while the goto jumps
+    # over an initialiser. Enter after the leading declarations instead; when
+    # the loop opens with a statement, body_decl_end() says so and h + 1 stands.
+    at = body_decl_end(lines[h + 1:g])
+    ins = h + 1 + (at[0] if at else 0)
+    # Loop-body indent: the declarations sit at it, whereas lines[g] may be
+    # nested one deeper inside a guard pathhide wrapped around the gather call.
+    ind = at[1] if at else indent_of(lines[g])
     label = [GUARD_MAP, 'bypass_orig_flow:', ENDIF_MAP]
     guard = [GUARD_MAP,
-             '\t\tif (vma->vm_file && SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))',
-             '\t\t\tgoto bypass_orig_flow;',
+             ind + 'if (vma->vm_file && SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))',
+             ind + '\tgoto bypass_orig_flow;',
              ENDIF_MAP]
+    # The label sits after `ins`, so inserting it first keeps that index valid.
     lines = lines[:g + 1] + label + lines[g + 1:]
-    lines = lines[:h + 1] + guard + lines[h + 1:]
+    lines = lines[:ins] + guard + lines[ins:]
     write(path, s[:a] + '\n'.join(lines) + s[b:])
-    return 'inserted at the show_smaps_rollup() loop head'
+    return 'inserted after the declarations at the show_smaps_rollup() loop head'
 
 
 def insert_top_declarations(tree, path, hunk):
