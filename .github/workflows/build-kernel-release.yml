@@ -637,6 +637,9 @@ jobs:
             if [ "${{ inputs.debug }}" == "true" ]; then
               export "CCACHE_LOGFILE=$CCACHE_LOG"
               echo "CCACHE_LOGFILE=$CCACHE_LOG" >> "$GITHUB_ENV"
+              # what every compile hashed, so two runs can be diffed input by input
+              echo "CCACHE_DEBUG=1" >> "$GITHUB_ENV"
+              echo "CCACHE_DEBUGDIR=${{ github.workspace }}/ccache-debug" >> "$GITHUB_ENV"
             fi
             
             if ccache --help 2>&1 | grep -q 'depend_mode'; then

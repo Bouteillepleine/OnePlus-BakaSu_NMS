@@ -2694,6 +2694,11 @@ runs:
           cp "$COMMON_KERNEL_FOLDER/out/vmlinux" "$DEBUG_ARTIFACTS_FOLDER/vmlinux"
           cp "$COMMON_KERNEL_FOLDER/out/Module.symvers" "$DEBUG_ARTIFACTS_FOLDER/Module.symvers"
           cp "$COMMON_KERNEL_FOLDER/out/System.map" "$DEBUG_ARTIFACTS_FOLDER/System.map"
+          if [ -d "${CCACHE_DEBUGDIR:-/nonexistent}" ]; then
+            (cd "$CCACHE_DEBUGDIR" && find . -name "*.ccache-input-text" -print0 \
+              | tar --null -cf - -T - | zstd -q -19 -T0 -o "$DEBUG_ARTIFACTS_FOLDER/ccache-input-text.tar.zst")
+            echo "ccache debug inputs: $(find "$CCACHE_DEBUGDIR" -name "*.ccache-input-text" | wc -l) files"
+          fi
           
           ls -la "$DEBUG_ARTIFACTS_FOLDER"
         else
